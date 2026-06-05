@@ -1,0 +1,43 @@
+# --- Genel ---
+.DS_Store
+*.log
+*.tmp
+.env
+.env.*
+!.env.example
+
+# --- Node ---
+node_modules/
+dist/
+build/
+.next/
+coverage/
+npm-debug.log*
+yarn-error.log*
+.pnpm-store/
+
+# --- .NET ---
+bin/
+obj/
+*.user
+.vs/
+
+# --- Flutter / Dart ---
+.dart_tool/
+.packages
+.pub-cache/
+.flutter-plugins
+.flutter-plugins-dependencies
+**/ios/Pods/
+**/android/.gradle/
+
+# --- Python ---
+__pycache__/
+*.pyc
+.venv/
+venv/
+.pytest_cache/
+
+# --- IDE ---
+.idea/
+*.swp
