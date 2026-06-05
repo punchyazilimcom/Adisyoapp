@@ -1,0 +1,7 @@
+# Canlı API anahtarı içeren yardımcı scriptler — ASLA commit'lenmez
+colab_basak_3haziran.py
+colab_basak_*.py
+
+# Python
+__pycache__/
+*.py[cod]
