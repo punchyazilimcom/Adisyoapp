@@ -1,0 +1,25 @@
+# Canlı API anahtarları içerir — ASLA commit'leme
+config.yaml
+
+# Çalışma çıktıları
+cache/
+logs/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+
+# PyInstaller
+build/
+dist/
+*.spec
+
+# IDE / OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db

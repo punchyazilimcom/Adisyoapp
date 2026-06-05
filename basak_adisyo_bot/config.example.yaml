@@ -1,0 +1,27 @@
+api:
+  base_url: "https://ext.adisyo.com/api/External/v2"
+  # Tüm şubelerde ortak olan anahtar (x-api-key)
+  x_api_key: "BURAYA_ORTAK_API_KEY"
+restaurants:
+  - name: "Demetevler"
+    x_api_secret: "BURAYA_SUBE_API_SECRET"     # şube bazlı (x-api-secret)
+    x_api_consumer: "Punch - Demetevler"        # şube bazlı (x-api-consumer)
+    excel_path: "C:\\BasakHesap\\DEMETEVLER_HAZİRAN_HESAP.xlsm"
+  - name: "Bahcelievler"
+    x_api_secret: "BURAYA_SUBE_API_SECRET"
+    x_api_consumer: "Punch - Bahcelievler"
+    excel_path: "C:\\BasakHesap\\BAHCELIEVLER_HAZİRAN_HESAP.xlsm"
+  - name: "Etlik"
+    x_api_secret: "BURAYA_SUBE_API_SECRET"
+    x_api_consumer: "Punch - Etlik"
+    excel_path: "C:\\BasakHesap\\ETLIK_HAZİRAN_HESAP.xlsm"
+  - name: "Batikent"
+    x_api_secret: "BURAYA_SUBE_API_SECRET"
+    x_api_consumer: "Punch - Batikent"
+    excel_path: "C:\\BasakHesap\\BATIKENT_HAZİRAN_HESAP.xlsm"
+settings:
+  timezone: "Europe/Istanbul"   # API UTC döner; +3 ile yerele çevrilir
+  day_start_hour: 0             # günlük pencere başlangıç saati (0 = gece yarısı)
+  page_delay_seconds: 42        # sayfalar arası bekleme (rate limit: 40 sn/çağrı)
+  cache_dir: "./cache"
+  log_dir: "./logs"

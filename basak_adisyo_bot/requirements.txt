@@ -1,0 +1,7 @@
+requests>=2.31
+openpyxl>=3.1
+PyYAML>=6.0
+tenacity>=8.2
+rich>=13.0
+# Windows'ta zoneinfo için zaman dilimi verisi gerekir (Linux/Mac'te genelde sistemde var)
+tzdata>=2024.1
