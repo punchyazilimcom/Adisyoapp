@@ -156,10 +156,15 @@ Public Sub BasakDoldur(ByVal isleGun As Date)
     c("R15") = PayNet(pencere, "Migros Online"):   c("Q16") = PayDisc(pencere, "Migros Online")
 
     ' 6) Hedef sayfaya YAZ (sadece izinli hucreler)
-    ' Uzun makro sonrasi Excel COM durumu icin: kisa bekle + tekrar dene
+    ' Uzun makro + WinHTTP/ADODB sonrasi Excel COM durumunu normallestir
     gAsama = "Excel toparlaniyor"
+    On Error Resume Next
+    Application.ScreenUpdating = True
+    Application.EnableEvents = True
+    Application.Calculation = xlCalculationAutomatic
+    On Error GoTo Hata
     DoEvents
-    Application.Wait Now + TimeSerial(0, 0, 2)
+    Application.Wait Now + TimeSerial(0, 0, 1)
 
     gAsama = "Hedef sayfa araniyor"
     Dim sheetName As String
@@ -177,11 +182,12 @@ Public Sub BasakDoldur(ByVal isleGun As Date)
 
     If ws Is Nothing Then
         Application.StatusBar = False
-        Dim sliste As String, wx As Worksheet
+        Dim sliste As String, ix As Long
         On Error Resume Next
-        For Each wx In ThisWorkbook.Worksheets
-            sliste = sliste & "[" & wx.Name & "] "
-        Next wx
+        For ix = 1 To ThisWorkbook.Worksheets.Count
+            sliste = sliste & "[" & ThisWorkbook.Worksheets(ix).Name & "] "
+        Next ix
+        sliste = sliste & " | Aktif: [" & ActiveSheet.Name & "]"
         On Error GoTo 0
         MsgBox "Sayfa bulunamadi: '" & sheetName & "'." & vbCrLf & vbCrLf & _
                "Mevcut sayfalar:" & vbCrLf & sliste, _
@@ -372,6 +378,7 @@ Private Function HttpGet(ByVal url As String) As String
             End If
         ElseIf http.Status >= 200 And http.Status < 300 Then
             HttpGet = body
+            Set http = Nothing
             Exit Function
         Else
             Err.Raise vbObjectError + 10, , "HTTP " & http.Status & " - " & url & vbCrLf & Left$(body, 600)
@@ -403,24 +410,33 @@ Private Function ResponseUtf8(ByVal http As Object) As String
     st.Charset = "utf-8"
     ResponseUtf8 = st.ReadText
     st.Close
+    Set st = Nothing
 End Function
 
 ' Sablon "HAZIRAN (N)" / "HAZIRAN (N)" gibi farkli yazimlari da bulur.
 Private Function BulSayfa(ByVal gun As Integer) As Worksheet
-    Dim ws As Worksheet, hedefSade As String, bulunan As Worksheet
+    Dim hedefSade As String, bulunan As Worksheet, idx As Long, cnt As Long
     hedefSade = "haziran" & gun               ' sadece harf+rakam: "haziran3"
     Set bulunan = Nothing
 
+    ' 1) AKTIF sayfa zaten dogruysa onu kullan (koleksiyon enumeratorune DOKUNMA)
+    '    Uzun makro sonrasi Worksheets taramasi cokebildigi icin once bu denenir.
     On Error Resume Next
-    ' Sayfa adini SADECE harf+rakama indirgeyip karsilastir
-    ' (bosluk / NBSP / parantez / nokta farklarini tamamen yok sayar)
-    For Each ws In ThisWorkbook.Worksheets
-        If SadeAd(NormTr(CStr(ws.Name))) = hedefSade Then
-            Set bulunan = ws
-            Exit For
-        End If
-    Next ws
+    If SadeAd(NormTr(CStr(ActiveSheet.Name))) = hedefSade Then Set bulunan = ActiveSheet
     On Error GoTo 0
+
+    ' 2) Degilse INDEKSLI ara (For Each YOK -> daha guvenli)
+    If bulunan Is Nothing Then
+        On Error Resume Next
+        cnt = ThisWorkbook.Worksheets.Count
+        For idx = 1 To cnt
+            If SadeAd(NormTr(CStr(ThisWorkbook.Worksheets(idx).Name))) = hedefSade Then
+                Set bulunan = ThisWorkbook.Worksheets(idx)
+                Exit For
+            End If
+        Next idx
+        On Error GoTo 0
+    End If
 
     Set BulSayfa = bulunan
 End Function
