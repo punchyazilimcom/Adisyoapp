@@ -123,7 +123,7 @@ Public Sub BasakDoldur(ByVal isleGun As Date)
         If page >= pageCount Then Exit Do
         page = page + 1
         Application.StatusBar = "Adisyo: rate limit, " & PAGE_DELAY_SEC & " sn bekleniyor..."
-        Application.Wait Now + TimeSerial(0, 0, PAGE_DELAY_SEC)
+        GuvenliBekle PAGE_DELAY_SEC
     Loop
 
     ' 4) insertDate ile pencereye filtrele
@@ -162,9 +162,8 @@ Public Sub BasakDoldur(ByVal isleGun As Date)
     Application.ScreenUpdating = True
     Application.EnableEvents = True
     Application.Calculation = xlCalculationAutomatic
-    On Error GoTo Hata
     DoEvents
-    Application.Wait Now + TimeSerial(0, 0, 1)
+    On Error GoTo Hata
 
     gAsama = "Hedef sayfa araniyor"
     Dim sheetName As String
@@ -392,11 +391,25 @@ End Function
 Private Sub BekleLimit(ByVal url As String)
     Dim w As Long, i As Long
     If InStr(url, "/Products") > 0 Then w = 185 Else w = 45
+    On Error Resume Next
     For i = w To 1 Step -1
         Application.StatusBar = "Adisyo istek limiti (601) - kalan " & i & " sn (durdurmak: Esc)"
         DoEvents
         Application.Wait Now + TimeSerial(0, 0, 1)
     Next i
+    On Error GoTo 0
+End Sub
+
+' Application.Wait bazi durumlarda 1004 verir; bu beklemeyi hataya dayanikli yapar.
+Private Sub GuvenliBekle(ByVal saniye As Long)
+    Dim hedef As Date
+    hedef = Now + TimeSerial(0, 0, saniye)
+    On Error Resume Next
+    Do While Now < hedef
+        DoEvents
+        Application.Wait Now + TimeSerial(0, 0, 1)
+    Loop
+    On Error GoTo 0
 End Sub
 
 Private Function ResponseUtf8(ByVal http As Object) As String
