@@ -306,8 +306,8 @@ End Function
 ' YARDIMCILAR - HTTP / sayfa / tarih / normalize
 '==============================================================================
 Private Function HttpGet(ByVal url As String) As String
-    Dim http As Object, tries As Long, waitSec As Long
-    For tries = 0 To 5
+    Dim http As Object, tries As Long, body As String, compact As String
+    For tries = 0 To 6
         Set http = CreateObject("WinHttp.WinHttpRequest.5.1")
         http.SetTimeouts 30000, 30000, 30000, 60000
         http.Open "GET", url, False
@@ -316,24 +316,34 @@ Private Function HttpGet(ByVal url As String) As String
         http.SetRequestHeader "x-api-consumer", X_API_CONSUMER
         http.SetRequestHeader "Accept", "application/json"
         http.Send
-        If http.Status = 429 Then
-            waitSec = CLng(2 ^ (tries + 1))     ' 2,4,8,16,32,64
-            Application.StatusBar = "429 rate limit, " & waitSec & " sn..."
-            Application.Wait Now + TimeSerial(0, 0, waitSec)
+
+        body = ""
+        On Error Resume Next
+        body = ResponseUtf8(http)
+        On Error GoTo 0
+        compact = Replace(body, " ", "")
+
+        ' Adisyo istek limiti: HTTP 429 VEYA HTTP 400 + body status=601
+        If http.Status = 429 Or InStr(compact, """status"":601") > 0 Then
+            BekleLimit url
         ElseIf http.Status >= 200 And http.Status < 300 Then
-            HttpGet = ResponseUtf8(http)
+            HttpGet = body
             Exit Function
         Else
-            Dim body As String
-            body = ""
-            On Error Resume Next
-            body = ResponseUtf8(http)
-            On Error GoTo 0
             Err.Raise vbObjectError + 10, , "HTTP " & http.Status & " - " & url & vbCrLf & Left$(body, 600)
         End If
     Next tries
-    Err.Raise vbObjectError + 11, , "429: cok fazla deneme"
+    Err.Raise vbObjectError + 11, , "Istek limiti asildi: cok fazla deneme. Lutfen birkac dakika sonra tekrar deneyin."
 End Function
+
+' Adisyo rate limit beklemesi: /Products 3 dk, diger uclar ~40 sn
+Private Sub BekleLimit(ByVal url As String)
+    Dim w As Long
+    If InStr(url, "/Products") > 0 Then w = 185 Else w = 45
+    Application.StatusBar = "Adisyo istek limiti (601) - " & w & " sn bekleniyor (Excel bu sure donuk gorunur)..."
+    DoEvents
+    Application.Wait Now + TimeSerial(0, 0, w)
+End Sub
 
 Private Function ResponseUtf8(ByVal http As Object) As String
     Dim st As Object

@@ -66,8 +66,8 @@ class AdisyoClient:
         retry=retry_if_exception_type(
             (RateLimitError, requests.exceptions.RequestException)
         ),
-        wait=wait_exponential(multiplier=2, min=2, max=120),
-        stop=stop_after_attempt(6),
+        wait=wait_exponential(multiplier=2, min=2, max=200),
+        stop=stop_after_attempt(7),
         reraise=True,
     )
     def _get(self, path: str, params: dict[str, Any] | None = None) -> dict[str, Any]:
@@ -75,8 +75,17 @@ class AdisyoClient:
         resp = self.session.get(
             url, headers=self._headers(), params=params, timeout=self.timeout
         )
-        if resp.status_code == 429:
-            log.warning("429 rate limit — %s; backoff ile yeniden denenecek", path)
+        # Adisyo istek limiti HTTP 429 ile DE, HTTP 400 + body status=601 ile DE gelebilir.
+        body_status: Any = None
+        try:
+            body_status = resp.json().get("status")
+        except ValueError:
+            body_status = None
+        if resp.status_code == 429 or body_status == 601:
+            log.warning(
+                "İstek limiti (HTTP %s / status %s) — %s; backoff ile yeniden denenecek",
+                resp.status_code, body_status, path,
+            )
             raise RateLimitError(path)
         resp.raise_for_status()
         return resp.json()
