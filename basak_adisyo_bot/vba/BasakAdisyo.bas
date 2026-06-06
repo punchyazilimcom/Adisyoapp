@@ -1,8 +1,8 @@
 Attribute VB_Name = "BasakAdisyo"
 '==============================================================================
-' BAŞAK — Adisyo -> Excel (VBA, Python YOK)
+' BASAK - Adisyo -> Excel (VBA, Python YOK)
 '==============================================================================
-' Bu modül, bulundugu .xlsm dosyasinin KENDI ICINDE calisir. Adisyo API'sinden
+' Bu modul, bulundugu .xlsm dosyasinin KENDI ICINDE calisir. Adisyo API'sinden
 ' veriyi WinHTTP ile ceker, JSON'u kendi parser'iyla ayristirir ve secilen
 ' tarihin "HAZIRAN (N)" sayfasinda SADECE izinli hucrelere yazar.
 '
@@ -16,7 +16,7 @@ Attribute VB_Name = "BasakAdisyo"
 '   4) Dosyayi makro etkin (.xlsm) olarak kaydet. Makrolar engellenirse:
 '      Dosya > Secenekler > Guven Merkezi > Makro Ayarlari > etkinlestir.
 '
-' SUBE BILGILERI (X_API_CONSUMER) — secret'lari guvenli yerden (config) girin:
+' SUBE BILGILERI (X_API_CONSUMER) - secret'lari guvenli yerden (config) girin:
 '   Demetevler   -> "Punch - Demetevler"
 '   Bahcelievler -> "Punch - Bahcelievler"
 '   Etlik        -> "Punch - Etlik"
@@ -147,7 +147,7 @@ Public Sub BasakDoldur(ByVal isleGun As Date)
 
     ' 6) Hedef sayfaya YAZ (sadece izinli hucreler)
     Dim sheetName As String
-    sheetName = "HAZIRAN (" & Day(isleGun) & ")"   ' NOT: sablon Turkce "HAZIRAN" / "HAZİRAN" olabilir
+    sheetName = "HAZIRAN (" & Day(isleGun) & ")"   ' NOT: sablon Turkce "HAZIRAN" / "HAZIRAN" olabilir
     Dim ws As Worksheet
     Set ws = BulSayfa(sheetName, Day(isleGun))
     If ws Is Nothing Then
@@ -232,7 +232,7 @@ Private Function QtyMatch(ByVal ords As Collection, ByVal needle As String, _
     QtyMatch = t
 End Function
 
-' L17: KIR PIDELERI (Kusbasili haric) — sadece paket
+' L17: KIR PIDELERI (Kusbasili haric) - sadece paket
 Private Function QtyKir(ByVal ords As Collection, kir As Object) As Double
     Dim t As Double, i As Long, j As Long, o As Object, prods As Object, p As Object, n As String
     For i = 1 To ords.Count
@@ -249,7 +249,7 @@ Private Function QtyKir(ByVal ords As Collection, kir As Object) As Double
     QtyKir = t
 End Function
 
-' L19: KUTU ICECEKLER (kanal kopyalari dahil) — sadece paket
+' L19: KUTU ICECEKLER (kanal kopyalari dahil) - sadece paket
 Private Function QtyKutu(ByVal ords As Collection, kutu As Object) As Double
     Dim t As Double, i As Long, j As Long, o As Object, prods As Object, p As Object, n As String
     For i = 1 To ords.Count
@@ -299,11 +299,11 @@ Private Function PayDisc(ByVal ords As Collection, ByVal payName As String) As D
 End Function
 
 Private Function IsPaket(ByVal o As Object) As Boolean
-    IsPaket = (CStr(Nz(o("orderType"))) = "Paket Siparişi")
+    IsPaket = (CStr(Nz(o("orderType"))) = "Paket Sipari" & ChrW(351) & "i")   ' Paket Siparisi
 End Function
 
 '==============================================================================
-' YARDIMCILAR — HTTP / sayfa / tarih / normalize
+' YARDIMCILAR - HTTP / sayfa / tarih / normalize
 '==============================================================================
 Private Function HttpGet(ByVal url As String) As String
     Dim http As Object, tries As Long, waitSec As Long
@@ -343,7 +343,7 @@ Private Function ResponseUtf8(ByVal http As Object) As String
     st.Close
 End Function
 
-' Sablon "HAZIRAN (N)" / "HAZİRAN (N)" gibi farkli yazimlari da bulur.
+' Sablon "HAZIRAN (N)" / "HAZIRAN (N)" gibi farkli yazimlari da bulur.
 Private Function BulSayfa(ByVal istenen As String, ByVal gun As Integer) As Worksheet
     Dim ws As Worksheet, hedef As String
     hedef = "haziran (" & gun & ")"
@@ -366,12 +366,12 @@ Private Function ParseUtc(ByVal s As String) As Date
 End Function
 
 Private Function NormTr(ByVal s As String) As String
-    s = Replace(s, "İ", "i"): s = Replace(s, "I", "i"): s = Replace(s, "ı", "i")
-    s = Replace(s, "Ş", "s"): s = Replace(s, "ş", "s")
-    s = Replace(s, "Ğ", "g"): s = Replace(s, "ğ", "g")
-    s = Replace(s, "Ü", "u"): s = Replace(s, "ü", "u")
-    s = Replace(s, "Ö", "o"): s = Replace(s, "ö", "o")
-    s = Replace(s, "Ç", "c"): s = Replace(s, "ç", "c")
+    s = Replace(s, ChrW(304), "i"): s = Replace(s, "I", "i"): s = Replace(s, ChrW(305), "i")  ' I-noktali / I / i-noktasiz
+    s = Replace(s, ChrW(350), "s"): s = Replace(s, ChrW(351), "s")  ' S / s (cedilla)
+    s = Replace(s, ChrW(286), "g"): s = Replace(s, ChrW(287), "g")  ' G / g (breve)
+    s = Replace(s, ChrW(220), "u"): s = Replace(s, ChrW(252), "u")  ' U / u (umlaut)
+    s = Replace(s, ChrW(214), "o"): s = Replace(s, ChrW(246), "o")  ' O / o (umlaut)
+    s = Replace(s, ChrW(199), "c"): s = Replace(s, ChrW(231), "c")  ' C / c (cedilla)
     s = LCase(s)
     Do While InStr(s, "  ") > 0: s = Replace(s, "  ", " "): Loop
     NormTr = Trim(s)
@@ -459,7 +459,7 @@ Private Function ParseArray() As Collection
 End Function
 
 Private Function ParseString() As String
-    gPos = gPos + 1            ' aciliş "
+    gPos = gPos + 1            ' acilis "
     Dim sb As String, ch As String, e As String, hex As String, cp As Long
     Do
         ch = Mid(gJson, gPos, 1)
