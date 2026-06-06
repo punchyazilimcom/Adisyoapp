@@ -307,7 +307,7 @@ End Function
 '==============================================================================
 Private Function HttpGet(ByVal url As String) As String
     Dim http As Object, tries As Long, body As String, compact As String
-    For tries = 0 To 6
+    For tries = 0 To 2
         Set http = CreateObject("WinHttp.WinHttpRequest.5.1")
         http.SetTimeouts 30000, 30000, 30000, 60000
         http.Open "GET", url, False
@@ -325,7 +325,14 @@ Private Function HttpGet(ByVal url As String) As String
 
         ' Adisyo istek limiti: HTTP 429 VEYA HTTP 400 + body status=601
         If http.Status = 429 Or InStr(compact, """status"":601") > 0 Then
-            BekleLimit url
+            If tries < 2 Then
+                BekleLimit url      ' bekle ve son bir kez daha dene
+            Else
+                Err.Raise vbObjectError + 12, , _
+                    "Adisyo istek limiti (601) hala acilmadi." & vbCrLf & _
+                    "Cok sik denendi. Lutfen 15-20 dakika HIC denemeden bekleyip" & vbCrLf & _
+                    "tek seferde tekrar calistirin." & vbCrLf & url
+            End If
         ElseIf http.Status >= 200 And http.Status < 300 Then
             HttpGet = body
             Exit Function
@@ -333,16 +340,19 @@ Private Function HttpGet(ByVal url As String) As String
             Err.Raise vbObjectError + 10, , "HTTP " & http.Status & " - " & url & vbCrLf & Left$(body, 600)
         End If
     Next tries
-    Err.Raise vbObjectError + 11, , "Istek limiti asildi: cok fazla deneme. Lutfen birkac dakika sonra tekrar deneyin."
+    Err.Raise vbObjectError + 11, , "Istek limiti: tekrar deneyin (birkac dakika sonra)."
 End Function
 
-' Adisyo rate limit beklemesi: /Products 3 dk, diger uclar ~40 sn
+' Adisyo rate limit beklemesi: geri sayimli, Esc ile kesilebilir, donuk gorunmez.
+' /Products 3 dk, diger uclar ~40 sn.
 Private Sub BekleLimit(ByVal url As String)
-    Dim w As Long
+    Dim w As Long, i As Long
     If InStr(url, "/Products") > 0 Then w = 185 Else w = 45
-    Application.StatusBar = "Adisyo istek limiti (601) - " & w & " sn bekleniyor (Excel bu sure donuk gorunur)..."
-    DoEvents
-    Application.Wait Now + TimeSerial(0, 0, w)
+    For i = w To 1 Step -1
+        Application.StatusBar = "Adisyo istek limiti (601) - kalan " & i & " sn (durdurmak: Esc)"
+        DoEvents
+        Application.Wait Now + TimeSerial(0, 0, 1)
+    Next i
 End Sub
 
 Private Function ResponseUtf8(ByVal http As Object) As String
