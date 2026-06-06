@@ -177,7 +177,14 @@ Public Sub BasakDoldur(ByVal isleGun As Date)
 
     If ws Is Nothing Then
         Application.StatusBar = False
-        MsgBox "Sayfa bulunamadi: '" & sheetName & "'. Mevcut sayfalari kontrol edin.", _
+        Dim sliste As String, wx As Worksheet
+        On Error Resume Next
+        For Each wx In ThisWorkbook.Worksheets
+            sliste = sliste & "[" & wx.Name & "] "
+        Next wx
+        On Error GoTo 0
+        MsgBox "Sayfa bulunamadi: '" & sheetName & "'." & vbCrLf & vbCrLf & _
+               "Mevcut sayfalar:" & vbCrLf & sliste, _
                vbExclamation, "Basak Adisyo"
         Exit Sub
     End If
@@ -400,28 +407,30 @@ End Function
 
 ' Sablon "HAZIRAN (N)" / "HAZIRAN (N)" gibi farkli yazimlari da bulur.
 Private Function BulSayfa(ByVal gun As Integer) As Worksheet
-    Dim ws As Worksheet, hedef As String, bulunan As Worksheet
-    hedef = "haziran (" & gun & ")"
+    Dim ws As Worksheet, hedefNs As String, ns As String, bulunan As Worksheet
+    hedefNs = "haziran(" & gun & ")"          ' normalize + BOSLUKSUZ hedef
     Set bulunan = Nothing
 
-    ' 1) Once dogrudan adla dene (For Each'siz; yaygin yazimlar)
     On Error Resume Next
-    Set bulunan = ThisWorkbook.Worksheets("HAZIRAN (" & gun & ")")
-    If bulunan Is Nothing Then Set bulunan = ThisWorkbook.Worksheets("Haziran (" & gun & ")")
-    If bulunan Is Nothing Then Set bulunan = ThisWorkbook.Worksheets("haziran (" & gun & ")")
-    On Error GoTo 0
-
-    ' 2) Bulunamazsa normalize ederek tara (bayrakli; dongu icinde Exit Function YOK)
+    ' 1) Bosluga duyarsiz tam eslesme (haziran(3) == haziran (3) == HAZIRAN ( 3 ))
+    For Each ws In ThisWorkbook.Worksheets
+        ns = Replace(NormTr(CStr(ws.Name)), " ", "")
+        If ns = hedefNs Then
+            Set bulunan = ws
+            Exit For
+        End If
+    Next ws
+    ' 2) Hala yoksa: "haziran" ve "(gun)" iceren ilk sayfa
     If bulunan Is Nothing Then
-        On Error Resume Next
         For Each ws In ThisWorkbook.Worksheets
-            If NormTr(CStr(ws.Name)) = hedef Then
+            ns = Replace(NormTr(CStr(ws.Name)), " ", "")
+            If InStr(ns, "haziran") > 0 And InStr(ns, "(" & gun & ")") > 0 Then
                 Set bulunan = ws
                 Exit For
             End If
         Next ws
-        On Error GoTo 0
     End If
+    On Error GoTo 0
 
     Set BulSayfa = bulunan
 End Function
