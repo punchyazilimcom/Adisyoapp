@@ -156,14 +156,29 @@ Public Sub BasakDoldur(ByVal isleGun As Date)
     c("R15") = PayNet(pencere, "Migros Online"):   c("Q16") = PayDisc(pencere, "Migros Online")
 
     ' 6) Hedef sayfaya YAZ (sadece izinli hucreler)
+    ' Uzun makro sonrasi Excel COM durumu icin: kisa bekle + tekrar dene
+    gAsama = "Excel toparlaniyor"
+    DoEvents
+    Application.Wait Now + TimeSerial(0, 0, 2)
+
     gAsama = "Hedef sayfa araniyor"
     Dim sheetName As String
     sheetName = "HAZIRAN (" & Day(isleGun) & ")"   ' NOT: sablon Turkce "HAZIRAN" / "HAZIRAN" olabilir
-    Dim ws As Worksheet
-    Set ws = BulSayfa(sheetName, Day(isleGun))
+    Dim ws As Worksheet, deneme As Long
+    Set ws = Nothing
+    For deneme = 1 To 3
+        On Error Resume Next
+        Set ws = BulSayfa(Day(isleGun))
+        On Error GoTo Hata
+        If Not ws Is Nothing Then Exit For
+        DoEvents
+        Application.Wait Now + TimeSerial(0, 0, 2)
+    Next deneme
+
     If ws Is Nothing Then
         Application.StatusBar = False
-        MsgBox "Sayfa bulunamadi: '" & sheetName & "'. Yazma atlandi.", vbExclamation, "Basak Adisyo"
+        MsgBox "Sayfa bulunamadi: '" & sheetName & "'. Mevcut sayfalari kontrol edin.", _
+               vbExclamation, "Basak Adisyo"
         Exit Sub
     End If
 
@@ -384,13 +399,31 @@ Private Function ResponseUtf8(ByVal http As Object) As String
 End Function
 
 ' Sablon "HAZIRAN (N)" / "HAZIRAN (N)" gibi farkli yazimlari da bulur.
-Private Function BulSayfa(ByVal istenen As String, ByVal gun As Integer) As Worksheet
-    Dim ws As Worksheet, hedef As String
+Private Function BulSayfa(ByVal gun As Integer) As Worksheet
+    Dim ws As Worksheet, hedef As String, bulunan As Worksheet
     hedef = "haziran (" & gun & ")"
-    For Each ws In ThisWorkbook.Worksheets
-        If NormTr(ws.Name) = hedef Then Set BulSayfa = ws: Exit Function
-    Next ws
-    Set BulSayfa = Nothing
+    Set bulunan = Nothing
+
+    ' 1) Once dogrudan adla dene (For Each'siz; yaygin yazimlar)
+    On Error Resume Next
+    Set bulunan = ThisWorkbook.Worksheets("HAZIRAN (" & gun & ")")
+    If bulunan Is Nothing Then Set bulunan = ThisWorkbook.Worksheets("Haziran (" & gun & ")")
+    If bulunan Is Nothing Then Set bulunan = ThisWorkbook.Worksheets("haziran (" & gun & ")")
+    On Error GoTo 0
+
+    ' 2) Bulunamazsa normalize ederek tara (bayrakli; dongu icinde Exit Function YOK)
+    If bulunan Is Nothing Then
+        On Error Resume Next
+        For Each ws In ThisWorkbook.Worksheets
+            If NormTr(CStr(ws.Name)) = hedef Then
+                Set bulunan = ws
+                Exit For
+            End If
+        Next ws
+        On Error GoTo 0
+    End If
+
+    Set BulSayfa = bulunan
 End Function
 
 Private Function FmtTs(ByVal dt As Date) As String
