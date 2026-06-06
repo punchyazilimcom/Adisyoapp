@@ -69,9 +69,11 @@ Public Sub BasakKilitAc()
            vbInformation, "Basak Adisyo"
 End Sub
 
-' Aktif sayfayi tekrar sifreyle kilitler
+' Aktif sayfayi tekrar sifreyle kilitler (tum hucreler)
 Public Sub BasakKilitle()
     On Error Resume Next
+    ActiveSheet.Unprotect Password:=KORUMA_SIFRE
+    ActiveSheet.Cells.Locked = True
     ActiveSheet.Protect Password:=KORUMA_SIFRE, DrawingObjects:=True, Contents:=True, Scenarios:=True
     On Error GoTo 0
     MsgBox "Kilitlendi: " & ActiveSheet.Name, vbInformation, "Basak Adisyo"
@@ -97,7 +99,8 @@ Public Sub BasakDoldur(ByVal isleGun As Date)
 
     ' 1b) Islenen gunden ONCEKI gunleri kilitle (COM bozulmadan, makro basinda)
     gAsama = "Onceki gunler kilitleniyor"
-    KilitleOncekiGunler Day(isleGun)
+    Dim kilitSayisi As Long
+    kilitSayisi = KilitleOncekiGunler(Day(isleGun))
 
     ' 2) Urunler -> kir pidesi / kutu icecek isim kumeleri
     Dim prodResp As Object, rawProducts As String
@@ -232,7 +235,8 @@ Public Sub BasakDoldur(ByVal isleGun As Date)
 
     Application.StatusBar = False
     MsgBox sheetName & " dolduruldu (" & pencere.Count & " siparis)." & vbCrLf & _
-           "L17 pide=" & c("L17") & "  L19 kutu=" & c("L19") & "  YS net=" & c("R9"), _
+           "L17 pide=" & c("L17") & "  L19 kutu=" & c("L19") & "  YS net=" & c("R9") & vbCrLf & _
+           "Onceki gunler kilitlendi: " & kilitSayisi & " sayfa", _
            vbInformation, "Basak Adisyo"
     Exit Sub
 
@@ -484,20 +488,24 @@ Private Function BulSayfa(ByVal gun As Integer) As Worksheet
 End Function
 
 ' Islenen gunden ONCEKI tum Haziran sayfalarini sifreyle korur (duzeltilemez yapar).
-' Makro basinda (COM bozulmadan once) cagrilir; indeksli erisim kullanir.
-Private Sub KilitleOncekiGunler(ByVal islenenGun As Integer)
-    Dim idx As Long, cnt As Long, g As Integer
+' TUM hucreleri kilitler (Locked=True) sonra Protect eder. Kilitlenen sayfa sayisini doner.
+Private Function KilitleOncekiGunler(ByVal islenenGun As Integer) As Long
+    Dim idx As Long, cnt As Long, g As Integer, n As Long
     On Error Resume Next
     cnt = ThisWorkbook.Worksheets.Count
     For idx = 1 To cnt
         g = HaziranGunu(CStr(ThisWorkbook.Worksheets(idx).Name))
         If g > 0 And g < islenenGun Then
+            ThisWorkbook.Worksheets(idx).Unprotect Password:=KORUMA_SIFRE
+            ThisWorkbook.Worksheets(idx).Cells.Locked = True
             ThisWorkbook.Worksheets(idx).Protect Password:=KORUMA_SIFRE, _
                 DrawingObjects:=True, Contents:=True, Scenarios:=True
+            n = n + 1
         End If
     Next idx
     On Error GoTo 0
-End Sub
+    KilitleOncekiGunler = n
+End Function
 
 ' "Haziran (3)" -> 3 ; Haziran sayfasi degilse 0
 Private Function HaziranGunu(ByVal ad As String) As Integer
