@@ -388,7 +388,9 @@ Private Function NormTr(ByVal s As String) As String
     s = Replace(s, ChrW(214), "o"): s = Replace(s, ChrW(246), "o")  ' O / o (umlaut)
     s = Replace(s, ChrW(199), "c"): s = Replace(s, ChrW(231), "c")  ' C / c (cedilla)
     s = LCase(s)
-    Do While InStr(s, "  ") > 0: s = Replace(s, "  ", " "): Loop
+    Do While InStr(s, "  ") > 0
+        s = Replace(s, "  ", " ")
+    Loop
     NormTr = Trim(s)
 End Function
 
@@ -403,7 +405,13 @@ Private Function Nz(ByVal v As Variant) As Variant
     If IsNull(v) Then Nz = "" Else Nz = v
 End Function
 Private Function NzNum(ByVal v As Variant, ByVal def As Double) As Double
-    If IsNull(v) Then NzNum = def ElseIf IsNumeric(v) Then NzNum = CDbl(v) Else NzNum = def
+    If IsNull(v) Then
+        NzNum = def
+    ElseIf IsNumeric(v) Then
+        NzNum = CDbl(v)
+    Else
+        NzNum = def
+    End If
 End Function
 
 '==============================================================================
