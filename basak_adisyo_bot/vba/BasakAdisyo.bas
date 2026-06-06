@@ -407,32 +407,32 @@ End Function
 
 ' Sablon "HAZIRAN (N)" / "HAZIRAN (N)" gibi farkli yazimlari da bulur.
 Private Function BulSayfa(ByVal gun As Integer) As Worksheet
-    Dim ws As Worksheet, hedefNs As String, ns As String, bulunan As Worksheet
-    hedefNs = "haziran(" & gun & ")"          ' normalize + BOSLUKSUZ hedef
+    Dim ws As Worksheet, hedefSade As String, bulunan As Worksheet
+    hedefSade = "haziran" & gun               ' sadece harf+rakam: "haziran3"
     Set bulunan = Nothing
 
     On Error Resume Next
-    ' 1) Bosluga duyarsiz tam eslesme (haziran(3) == haziran (3) == HAZIRAN ( 3 ))
+    ' Sayfa adini SADECE harf+rakama indirgeyip karsilastir
+    ' (bosluk / NBSP / parantez / nokta farklarini tamamen yok sayar)
     For Each ws In ThisWorkbook.Worksheets
-        ns = Replace(NormTr(CStr(ws.Name)), " ", "")
-        If ns = hedefNs Then
+        If SadeAd(NormTr(CStr(ws.Name))) = hedefSade Then
             Set bulunan = ws
             Exit For
         End If
     Next ws
-    ' 2) Hala yoksa: "haziran" ve "(gun)" iceren ilk sayfa
-    If bulunan Is Nothing Then
-        For Each ws In ThisWorkbook.Worksheets
-            ns = Replace(NormTr(CStr(ws.Name)), " ", "")
-            If InStr(ns, "haziran") > 0 And InStr(ns, "(" & gun & ")") > 0 Then
-                Set bulunan = ws
-                Exit For
-            End If
-        Next ws
-    End If
     On Error GoTo 0
 
     Set BulSayfa = bulunan
+End Function
+
+' Bir metinden yalnizca a-z ve 0-9 karakterlerini birakir (digerlerini atar)
+Private Function SadeAd(ByVal s As String) As String
+    Dim i As Long, ch As String, o As String
+    For i = 1 To Len(s)
+        ch = Mid(s, i, 1)
+        If (ch >= "a" And ch <= "z") Or (ch >= "0" And ch <= "9") Then o = o & ch
+    Next i
+    SadeAd = o
 End Function
 
 Private Function FmtTs(ByVal dt As Date) As String
