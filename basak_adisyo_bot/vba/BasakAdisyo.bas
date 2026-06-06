@@ -42,6 +42,7 @@ Private Const ALLOWED As String = "|L7|L11|L17|L19|E16|E18|E20|R9|Q10|R11|Q12|R1
 ' JSON parser durum degiskenleri
 Private gJson As String
 Private gPos As Long
+Private gAsama As String   ' teshis: hata aninda hangi adimda oldugumuz
 
 '==============================================================================
 ' GIRIS NOKTALARI (butona baglanacak makrolar)
@@ -76,14 +77,18 @@ Public Sub BasakDoldur(ByVal isleGun As Date)
     utcBit = DateAdd("h", -UTC_OFFSET, yerelBit)
 
     ' 2) Urunler -> kir pidesi / kutu icecek isim kumeleri
-    Dim prodResp As Object
-    Set prodResp = ParseJson(HttpGet(BASE_URL & "/Products"))
+    Dim prodResp As Object, rawProducts As String
+    gAsama = "Products HTTP"
+    rawProducts = HttpGet(BASE_URL & "/Products")
+    gAsama = "Products JSON parse (uzunluk=" & Len(rawProducts) & ")"
+    Set prodResp = ParseJson(rawProducts)
     If Nz(prodResp("status")) <> API_OK Then Err.Raise vbObjectError + 1, , _
         "Products status=" & Nz(prodResp("status")) & " " & Nz(prodResp("message"))
 
     Dim kir As Object, kutu As Object
     Set kir = CreateObject("Scripting.Dictionary")
     Set kutu = CreateObject("Scripting.Dictionary")
+    gAsama = "Urun haritasi kuruluyor"
     BuildIndex prodResp("data"), kir, kutu
 
     ' 3) Siparisleri sayfalayarak cek
@@ -93,18 +98,21 @@ Public Sub BasakDoldur(ByVal isleGun As Date)
     Dim page As Long, pageCount As Long
     page = 1
     Do
-        Dim url As String
+        Dim url As String, rawOrders As String
         url = BASE_URL & "/CompletedOrders?page=" & page & _
               "&startDate=" & UrlEnc(startUtc) & "&includeCancelled=false"
+        gAsama = "Siparis HTTP sayfa " & page
+        rawOrders = HttpGet(url)
+        gAsama = "Siparis JSON parse sayfa " & page & " (uzunluk=" & Len(rawOrders) & ")"
         Dim resp As Object
-        Set resp = ParseJson(HttpGet(url))
+        Set resp = ParseJson(rawOrders)
         If Nz(resp("status")) <> API_OK Then Err.Raise vbObjectError + 2, , _
             "CompletedOrders status=" & Nz(resp("status")) & " " & Nz(resp("message"))
 
+        gAsama = "Siparis sayfa " & page & " isleniyor"
         Dim arr As Object, i As Long
-        On Error Resume Next
-        Set arr = resp("orders")
-        On Error GoTo Hata
+        Set arr = Nothing
+        If resp.Exists("orders") Then Set arr = resp("orders")
         If Not arr Is Nothing Then
             For i = 1 To arr.Count
                 orders.Add arr(i)
@@ -119,6 +127,7 @@ Public Sub BasakDoldur(ByVal isleGun As Date)
     Loop
 
     ' 4) insertDate ile pencereye filtrele
+    gAsama = "Pencere filtreleme (" & orders.Count & " siparis)"
     Dim pencere As Collection
     Set pencere = New Collection
     Dim o As Object, ins As Date
@@ -131,6 +140,7 @@ Public Sub BasakDoldur(ByVal isleGun As Date)
     Next i
 
     ' 5) Hucre degerlerini hesapla
+    gAsama = "Hesaplama (" & pencere.Count & " siparis)"
     Dim c As Object
     Set c = CreateObject("Scripting.Dictionary")
     c("L7") = QtyMatch(pencere, "kucuk ayran", False, kir, kutu, "contains")
@@ -146,6 +156,7 @@ Public Sub BasakDoldur(ByVal isleGun As Date)
     c("R15") = PayNet(pencere, "Migros Online"):   c("Q16") = PayDisc(pencere, "Migros Online")
 
     ' 6) Hedef sayfaya YAZ (sadece izinli hucreler)
+    gAsama = "Hedef sayfa araniyor"
     Dim sheetName As String
     sheetName = "HAZIRAN (" & Day(isleGun) & ")"   ' NOT: sablon Turkce "HAZIRAN" / "HAZIRAN" olabilir
     Dim ws As Worksheet
@@ -156,10 +167,11 @@ Public Sub BasakDoldur(ByVal isleGun As Date)
         Exit Sub
     End If
 
+    gAsama = "Hucrelere yaziliyor"
     Dim k As Variant
     For Each k In c.Keys
         If InStr(ALLOWED, "|" & k & "|") = 0 Then Err.Raise vbObjectError + 3, , "Izinsiz hucre: " & k
-        ws.Range(k).Value = c(k)   ' SADECE value; bicim/format korunur
+        ws.Range(CStr(k)).Value = c(k)   ' SADECE value; bicim/format korunur
     Next k
 
     Application.StatusBar = False
@@ -170,7 +182,10 @@ Public Sub BasakDoldur(ByVal isleGun As Date)
 
 Hata:
     Application.StatusBar = False
-    MsgBox "HATA: " & Err.Description, vbCritical, "Basak Adisyo"
+    MsgBox "HATA [" & gAsama & "]" & vbCrLf & _
+           Err.Description & vbCrLf & _
+           "No=" & Err.Number & "  Kaynak=" & Err.Source, _
+           vbCritical, "Basak Adisyo"
 End Sub
 
 '==============================================================================
