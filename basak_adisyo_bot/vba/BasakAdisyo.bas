@@ -34,6 +34,7 @@ Private Const DAY_START_HOUR As Integer = 0   ' gunluk pencere baslangici
 Private Const UTC_OFFSET As Integer = 3       ' Istanbul = UTC+3 (sabit)
 Private Const PAGE_DELAY_SEC As Long = 42     ' sayfalar arasi bekleme
 Private Const API_OK As Long = 100
+Private Const KORUMA_SIFRE As String = "571632"   ' gecmis gun sayfa korumasi sifresi
 '------------------------------------------------------------------------------
 
 ' Izinli hucreler (bunlarin DISINA asla yazilmaz)
@@ -58,6 +59,24 @@ Public Sub BasakDoldur_Sor()
     BasakDoldur DateSerial(CInt(Mid(s, 1, 4)), CInt(Mid(s, 6, 2)), CInt(Mid(s, 9, 2)))
 End Sub
 
+' Aktif sayfanin korumasini sifreyle kaldirir (gecmis bir gunu elle duzeltmek icin)
+Public Sub BasakKilitAc()
+    On Error Resume Next
+    ActiveSheet.Unprotect Password:=KORUMA_SIFRE
+    On Error GoTo 0
+    MsgBox "Koruma kaldirildi: " & ActiveSheet.Name & vbCrLf & _
+           "Duzeltme bitince tekrar kilitlemek icin BasakKilitle calistirin.", _
+           vbInformation, "Basak Adisyo"
+End Sub
+
+' Aktif sayfayi tekrar sifreyle kilitler
+Public Sub BasakKilitle()
+    On Error Resume Next
+    ActiveSheet.Protect Password:=KORUMA_SIFRE, DrawingObjects:=True, Contents:=True, Scenarios:=True
+    On Error GoTo 0
+    MsgBox "Kilitlendi: " & ActiveSheet.Name, vbInformation, "Basak Adisyo"
+End Sub
+
 '==============================================================================
 ' ANA AKIS
 '==============================================================================
@@ -75,6 +94,10 @@ Public Sub BasakDoldur(ByVal isleGun As Date)
     Dim utcBas As Date, utcBit As Date
     utcBas = DateAdd("h", -UTC_OFFSET, yerelBas)
     utcBit = DateAdd("h", -UTC_OFFSET, yerelBit)
+
+    ' 1b) Islenen gunden ONCEKI gunleri kilitle (COM bozulmadan, makro basinda)
+    gAsama = "Onceki gunler kilitleniyor"
+    KilitleOncekiGunler Day(isleGun)
 
     ' 2) Urunler -> kir pidesi / kutu icecek isim kumeleri
     Dim prodResp As Object, rawProducts As String
@@ -193,6 +216,12 @@ Public Sub BasakDoldur(ByVal isleGun As Date)
                vbExclamation, "Basak Adisyo"
         Exit Sub
     End If
+
+    ' Aktif (islenen) sayfa onceden kilitlenmis olabilir -> sifreyle ac, sonra yaz
+    gAsama = "Aktif sayfa korumasi aciliyor"
+    On Error Resume Next
+    ws.Unprotect Password:=KORUMA_SIFRE
+    On Error GoTo Hata
 
     gAsama = "Hucrelere yaziliyor"
     Dim k As Variant
@@ -452,6 +481,35 @@ Private Function BulSayfa(ByVal gun As Integer) As Worksheet
     End If
 
     Set BulSayfa = bulunan
+End Function
+
+' Islenen gunden ONCEKI tum Haziran sayfalarini sifreyle korur (duzeltilemez yapar).
+' Makro basinda (COM bozulmadan once) cagrilir; indeksli erisim kullanir.
+Private Sub KilitleOncekiGunler(ByVal islenenGun As Integer)
+    Dim idx As Long, cnt As Long, g As Integer
+    On Error Resume Next
+    cnt = ThisWorkbook.Worksheets.Count
+    For idx = 1 To cnt
+        g = HaziranGunu(CStr(ThisWorkbook.Worksheets(idx).Name))
+        If g > 0 And g < islenenGun Then
+            ThisWorkbook.Worksheets(idx).Protect Password:=KORUMA_SIFRE, _
+                DrawingObjects:=True, Contents:=True, Scenarios:=True
+        End If
+    Next idx
+    On Error GoTo 0
+End Sub
+
+' "Haziran (3)" -> 3 ; Haziran sayfasi degilse 0
+Private Function HaziranGunu(ByVal ad As String) As Integer
+    Dim s As String, r As String
+    HaziranGunu = 0
+    s = SadeAd(NormTr(ad))            ' "haziran3"
+    If Len(s) > 7 Then
+        If Left(s, 7) = "haziran" Then
+            r = Mid(s, 8)
+            If IsNumeric(r) Then HaziranGunu = CInt(r)
+        End If
+    End If
 End Function
 
 ' Bir metinden yalnizca a-z ve 0-9 karakterlerini birakir (digerlerini atar)
