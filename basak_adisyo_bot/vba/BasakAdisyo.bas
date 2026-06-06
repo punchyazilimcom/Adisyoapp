@@ -324,7 +324,12 @@ Private Function HttpGet(ByVal url As String) As String
             HttpGet = ResponseUtf8(http)
             Exit Function
         Else
-            Err.Raise vbObjectError + 10, , "HTTP " & http.Status & " - " & url
+            Dim body As String
+            body = ""
+            On Error Resume Next
+            body = ResponseUtf8(http)
+            On Error GoTo 0
+            Err.Raise vbObjectError + 10, , "HTTP " & http.Status & " - " & url & vbCrLf & Left$(body, 600)
         End If
     Next tries
     Err.Raise vbObjectError + 11, , "429: cok fazla deneme"
